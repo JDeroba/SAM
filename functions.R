@@ -9,8 +9,8 @@ plotfxn<-function(afit=NULL,datdirect=NULL,run=NULL,confa=NULL,qplotnamesa=NULL,
   par(mfrow=c(1,1))
   fbarplot(afit)
   par(mfrow=c(1,1))
-  fitplot(afit)
-  par(mfrow=c(1,1))
+  #fitplot(afit)
+  #par(mfrow=c(1,1))
   obscorrplot(afit)
   par(mfrow=c(1,1))
   parplot(afit)
@@ -25,12 +25,12 @@ plotfxn<-function(afit=NULL,datdirect=NULL,run=NULL,confa=NULL,qplotnamesa=NULL,
   
   resids<-residuals(afit)
   plot(resids)
-  residpro<-procres(afit)
-  plot(residpro)
-  retro<-retro(afit,year=retroyrs)
-  plot(retro)
-  lo<-leaveout(afit) #"leave one out", as in fit without each survey
-  plot(lo)
+  #residpro<-procres(afit)
+  #plot(residpro)
+  #retro<-retro(afit,year=retroyrs)
+  #plot(retro)
+  #lo<-leaveout(afit) #"leave one out", as in fit without each survey
+  #plot(lo)
   
   #rescale F's at age to max of one as in selectivity and plot through years
   select<-matrix(nrow=nrow(faytable(afit)),ncol=ncol(faytable(afit)))
@@ -75,9 +75,9 @@ plotfxn<-function(afit=NULL,datdirect=NULL,run=NULL,confa=NULL,qplotnamesa=NULL,
   }    
   ########
   
-  mohn_rhossb<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="ssb") #calculate and plot retro
-  mohn_rhofbar<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="fbar") #calculate and plot retro
-  mohn_rhoR<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="R") #calculate and plot retro
+  #mohn_rhossb<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="ssb") #calculate and plot retro
+  #mohn_rhofbar<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="fbar") #calculate and plot retro
+  #mohn_rhoR<-calc_Mohn_rho(fit=afit,ret=retro,npeel=7,what="R") #calculate and plot retro
   
   catchresids<-calc_catch_resids(fit=afit) #Legault catch residuals
   

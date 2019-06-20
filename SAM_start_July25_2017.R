@@ -3,11 +3,12 @@ rm(list=ls(all=T))
 #devtools::install_github("fishfollower/SAM/stockassessment")
 #install.packages("TMB")
 library(stockassessment)
-source(paste("C:\\SAM_StateSpace","functions.R",sep="\\")) #shouldn't have to touch
+source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-master","functions.R",sep="\\")) #shouldn't have to touch
 #library(TMB)
 
-datdirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test\\vpa"  #"C:\\Herring\\2018 Assessment\\Assessments\\SAM" #directory where data are held
-run<-"SAM2" #subdirectory of datdirect to hold individual model runs.
+truedirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test"
+datdirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test\\vpa"  #directory where data are held
+run<-"SAM3" #subdirectory of datdirect to hold individual model runs.
 
 likeliprof<-FALSE #Do likelihood profile of M?  Results placed in "run" folder
 
@@ -38,6 +39,10 @@ surveys <- read.ices(paste(datdirect,"sim-TUNE.txt",sep="\\"))
 #surveys <- read.ices(paste(datdirect,"Herrsurvey_Calibrated.dat",sep="\\"))
 }
 
+#For ICES AMWG SR work.  
+cnran<-matrix(rnorm(nrow(cn)*ncol(cn),mean=0,sd=0.4),nrow(cn),ncol(cn))
+cn<-cn*exp(cnran)
+
 ages<-seq(1,ncol(cn),1) #just ages, no need to touch
 
 #setup the data as needed for SAM; only touch if data files are added above
@@ -62,7 +67,10 @@ conf<-loadConf(dat=dat,file=paste(datdirect,paste(run,"ModelConf.txt",sep="\\"),
 
 par<-defpar(dat,conf) #some default starting values
 
-fit<-sam.fit(dat,conf,par,run=T) #fit the model
+#turn off survival process variance and set to 0
+par$logSdLogN[2]<-1 #set sd of logN age2-20 to 0 (1 in log space)
+
+fit<-sam.fit(dat,conf,par,run=T,map=list("logSdLogN"=factor(c(1,NA)))) #fit the model
 saveRDS(fit,file=paste(datdirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #save the results
 #fit<-readRDS(file=paste(datdirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #read old result back-in; I noticed some plots aren't made correctly when you read in old results.
 
@@ -81,7 +89,7 @@ Fpronames<-getnames(confa=t(as.matrix(conf$keyVarF[1,])),agesa=ages,looptoa=(max
 Npronames<-getnames(confa=t(as.matrix(conf$keyVarLogN)),agesa=ages,looptoa=(max(conf$keyVarLogN)+1),looptob=1,namesa="SD LogN process")
 Obsnames<-getnames(confa=conf$keyVarObs,agesa=ages,looptoa=(max(conf$keyVarObs)+1),looptob=nrow(conf$keyVarObs),namesa=c("Catch",names(surveys)))
 Obsnames<-paste("SD",Obsnames)
-varplotnames<-c(Fpronames,Npronames,Obsnames)
+varplotnames<-c(Fpronames,Npronames[1],Obsnames) #only do first N pro because other set to zero
 Fstanames<-getnames(confa=t(as.matrix(conf$keyLogFsta[1,])),agesa=ages,looptoa=(max(conf$keyLogFsta)+1),looptob=1,namesa="F")
 
 if(conf$noScaledYears>0){
@@ -132,4 +140,27 @@ if(FALSE){
   }
   
 }
+
+####Compare to truth
+true<-read.csv(paste(truedirect,"test_rcc-bhm-lndev03.csv",sep="\\"))
+yearwant<-max(true$year)-dat$noYears+1
+
+forpdf<-paste(run,"TrueVEst.pdf",sep="")
+pdf(paste(paste(datdirect,run,sep="\\"),forpdf,sep="\\")) #create pdf for graph storage
+
+plot(true[true$year>=yearwant,"year"],true[true$year>=yearwant,"ssb"],type='l',col="black",xlab="Year",ylab="SSB")
+lines(true[true$year>=yearwant,"year"],exp(fit$sdrep$value[names(fit$sdrep$value)=="logssb"]),col="red",type="l")
+legend("topright",legend=c("true","SAM"),fill=c("black","red"))
+
+plot(true[true$year>=yearwant,"year"],true[true$year>=yearwant,"fbar"],type='l',col="black",xlab="Year",ylab="fbar")
+lines(true[true$year>=yearwant,"year"],exp(fit$sdrep$value[names(fit$sdrep$value)=="logfbar"]),col="red",type="l")
+legend("topright",legend=c("true","SAM"),fill=c("black","red"))
+
+plot(true[true$year>=yearwant,"year"],true[true$year>=yearwant,"rec"],type='l',col="black",xlab="Year",ylab="Recruitment")
+lines(true[true$year>=yearwant,"year"],exp(fit$sdrep$value[names(fit$sdrep$value)=="logR"]),col="red",type="l")
+legend("topright",legend=c("true","SAM"),fill=c("black","red"))
+dev.off()
+
+
+
 
