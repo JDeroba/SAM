@@ -3,12 +3,12 @@ rm(list=ls(all=T))
 #devtools::install_github("fishfollower/SAM/stockassessment")
 #install.packages("TMB")
 library(stockassessment)
-source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-master","functions.R",sep="\\")) #shouldn't have to touch
+source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-ICES-WG-SR-one-off","functions.R",sep="\\")) #shouldn't have to touch
 #library(TMB)
 
 truedirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test"
 datdirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test\\vpa"  #directory where data are held
-run<-"SAM3" #subdirectory of datdirect to hold individual model runs.
+run<-"play" #subdirectory of datdirect to hold individual model runs.
 
 likeliprof<-FALSE #Do likelihood profile of M?  Results placed in "run" folder
 
@@ -58,7 +58,7 @@ dat <- setup.sam.data(surveys=surveys,
                          #land.mean.weight = lw,
                       catch.mean.weight=cw)
 
-conf<-loadConf(dat=dat,file=paste(datdirect,paste(run,"ModelConf.txt",sep="\\"),sep="\\" ))
+conf<-loadConf(dat=dat,file=paste(truedirect,paste(run,"ModelConf.txt",sep="\\"),sep="\\" ))
 #conf<-defcon(dat) #a default configuration for SAM; no touch
 #saveConf(conf,file=paste(datdirect,paste(run,"ModelConf.txt",sep="\\"),sep="\\" ),overwrite=T)
 #conf<-fit$conf #set configuration to a previous run (need to read in a previous fit below)
@@ -69,13 +69,14 @@ par<-defpar(dat,conf) #some default starting values
 
 #turn off survival process variance and set to 0
 par$logSdLogN[2]<-1 #set sd of logN age2-20 to 0 (1 in log space)
+par$logSdLogObs[1]<-0.1 #set catch sd to some value (e.g., zero, truth)
 
-fit<-sam.fit(dat,conf,par,run=T,map=list("logSdLogN"=factor(c(1,NA)))) #fit the model
-saveRDS(fit,file=paste(datdirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #save the results
+fit<-sam.fit(dat,conf,par,run=T,map=list("logSdLogN"=factor(c(1,NA)),"logSdLogObs"=factor(c(NA,1)))) #fit the model
+saveRDS(fit,file=paste(truedirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #save the results
 #fit<-readRDS(file=paste(datdirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #read old result back-in; I noticed some plots aren't made correctly when you read in old results.
 
 modelTable<-modeltable(fit) #AIC and number of params
-write.csv(modelTable,file=paste(datdirect,paste(run,"ModelTable.csv",sep="\\"),sep="\\" ))
+write.csv(modelTable,file=paste(truedirect,paste(run,"ModelTable.csv",sep="\\"),sep="\\" ))
 
 #Creates graphic axis names
 #getnames<-function(confa,agesa,looptoa,looptob,namesa) 
@@ -120,7 +121,7 @@ if(length(catchmultnames)==2*(max(conf$keyParScaledYA)+1)) {
 }
 
 #make the plots and save to pdf in Run sub-directory
-plotfxn(afit=fit,datdirect=datdirect,run=run,confa=conf,qplotnamesa=qplotnames,varplotnamesa=varplotnames,fstanamesa=Fstanames,catchmultnamesa=catchmultnames,retroyrs=2) #as.vector(seq(2011,2014)))
+plotfxn(afit=fit,datdirect=truedirect,run=run,confa=conf,qplotnamesa=qplotnames,varplotnamesa=varplotnames,fstanamesa=Fstanames,catchmultnamesa=catchmultnames,retroyrs=2) #as.vector(seq(2011,2014)))
 
 #does likelihood profile and makes some plots; puts results in run directory
 #may not be working correctly
@@ -146,7 +147,7 @@ true<-read.csv(paste(truedirect,"test_rcc-bhm-lndev03.csv",sep="\\"))
 yearwant<-max(true$year)-dat$noYears+1
 
 forpdf<-paste(run,"TrueVEst.pdf",sep="")
-pdf(paste(paste(datdirect,run,sep="\\"),forpdf,sep="\\")) #create pdf for graph storage
+pdf(paste(paste(truedirect,run,sep="\\"),forpdf,sep="\\")) #create pdf for graph storage
 
 plot(true[true$year>=yearwant,"year"],true[true$year>=yearwant,"ssb"],type='l',col="black",xlab="Year",ylab="SSB")
 lines(true[true$year>=yearwant,"year"],exp(fit$sdrep$value[names(fit$sdrep$value)=="logssb"]),col="red",type="l")
