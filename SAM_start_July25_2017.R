@@ -8,7 +8,7 @@ source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-ICES-WG-SR-one-
 
 truedirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test"
 datdirect<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\wg_MGWG-master\\stock-recruitment\\comparing_recruitment\\simulated_stocks\\test\\vpa"  #directory where data are held
-run<-"play" #subdirectory of datdirect to hold individual model runs.
+run<-"SAM3" #subdirectory of datdirect to hold individual model runs.
 
 likeliprof<-FALSE #Do likelihood profile of M?  Results placed in "run" folder
 
@@ -69,11 +69,11 @@ par<-defpar(dat,conf) #some default starting values
 
 #turn off survival process variance and set to 0
 par$logSdLogN[2]<-1 #set sd of logN age2-20 to 0 (1 in log space)
-par$logSdLogObs[1]<-0.1 #set catch sd to some value (e.g., zero, truth)
+#par$logSdLogObs[1]<-0.1 #set catch sd to some value (e.g., zero, truth)
 
-fit<-sam.fit(dat,conf,par,run=T,map=list("logSdLogN"=factor(c(1,NA)),"logSdLogObs"=factor(c(NA,1)))) #fit the model
+fit<-sam.fit(dat,conf,par,run=T,map=list("logSdLogN"=factor(c(1,NA)))) #fit the model
 saveRDS(fit,file=paste(truedirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #save the results
-#fit<-readRDS(file=paste(datdirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #read old result back-in; I noticed some plots aren't made correctly when you read in old results.
+#fit<-readRDS(file=paste(truedirect,paste(run,"SAMfit.RData",sep="\\"),sep="\\" )) #read old result back-in; I noticed some plots aren't made correctly when you read in old results.
 
 modelTable<-modeltable(fit) #AIC and number of params
 write.csv(modelTable,file=paste(truedirect,paste(run,"ModelTable.csv",sep="\\"),sep="\\" ))
@@ -162,6 +162,24 @@ lines(true[true$year>=yearwant,"year"],exp(fit$sdrep$value[names(fit$sdrep$value
 legend("topright",legend=c("true","SAM"),fill=c("black","red"))
 dev.off()
 
-
+####Do sims?
+if(FALSE){
+  fit2<-readRDS(file=paste(truedirect,paste("SAM","SAMfit.RData",sep="\\"),sep="\\" )) #read old result back-in;
+  
+  fit2$sdrep$par.fixed<-fit$sdrep$par.fixed[names(fit2$sdrep$par.fixed) %in% names(fit$sdrep$par.fixed)]
+  fit2$sdrep$par.fixed<-fit2$sdrep$par.fixed[!is.na(fit2$sdrep$par.fixed)]
+  temp<-1
+  names(temp)<-c("logSdLogN")
+  fit2$sdrep$par.fixed<-c(fit2$sdrep$par.fixed,temp)
+  
+  fit2$sdrep$value<-fit$sdrep$value
+ 
+  simdat<-simulate(fit2,seed=3654,nsim=1)[[1]]
+  simfit<-sam.fit(simdat,conf,par,map=list("logSdLogN"=factor(c(1,NA))))
+  
+  ssbplot(fit2)
+  ssbplot(simfit,add=TRUE)
+  ssbplot(fit,add=TRUE)
+}
 
 
