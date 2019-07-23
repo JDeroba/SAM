@@ -7,15 +7,13 @@ direct<-"B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_BH"
 
 files<-list.files(direct) 
 
-
-
 for(r in 1:1){ #loop over OM level folders
   r.folder<-paste(direct,files[r],sep="\\") #OM level (r) folder
   iters<-list.files(r.folder,pattern="iter") #datasets within OM folder
   converge.count<-0 #count the number of converged runs
   SRparms<-c() #matrix(NA,2,8)  #container for all Stock recruit param estimates
-  for(i in 1:2){  #length(iters)){  #loop over datasets within OM
-    
+  for(i in 1:length(iters)){  #loop over datasets within OM
+    write(i,paste(direct,paste(files[r],"loopcount.txt",sep="\\"),sep="\\"))
     iter<-paste(r.folder,iters[i],sep="\\") #single dataset folder
     #read in single dataset
     cn <- read.ices(paste(iter,"sim-LANUM.txt",sep="\\"))
@@ -53,9 +51,16 @@ for(r in 1:1){ #loop over OM level folders
     
     if(is.null(attr(fit,"condition"))){
     saveRDS(fit,file=paste(iter,"SAMfit.RData",sep="\\" )) #save the results
-    converge.count<-converge.count+1
     modelTable<-modeltable(fit) #AIC and number of params
     write.csv(modelTable,file=paste(iter,"ModelTable.csv",sep="\\"))
+    
+    if(fit[[6]][3]==0){  #check for model convergence and record in SRparms below
+    converge.count<-converge.count+1
+    converge<-"yes"
+    } else {
+    converge<-"no"
+    }
+    
     if(fit$conf$stockRecruitmentModelCode==2){
     alpha<-partable(fit)["rec_loga_0","exp(par)"]
     beta<-partable(fit)["rec_logb_0","exp(par)"]
@@ -66,8 +71,8 @@ for(r in 1:1){ #loop over OM level folders
     StWt<-fit$data$stockMeanWeight[nrow(fit$data$stockMeanWeight),]
     Mature<-fit$data$propMat[nrow(fit$data$propMat),]
     SRparmsa<-SR.parms(nage=max(fit$data$maxAgePerFleet),M=natMor,Wt=StWt,Mat=Mature,alpha=alpha,beta=beta,type=fit$conf$stockRecruitmentModelCode)
-    SRparms<-rbind(SRparms,cbind(SRparmsa,alpha.flr,beta.flr,files[r],iters[i]) )
-    } 
+    SRparms<-rbind(SRparms,cbind(SRparmsa,alpha.flr,beta.flr,files[r],iters[i],"converge"=converge) )
+    } #if Bev Holt
     
     ##Will save fit details and diagnostic plots pdf if TRUE
     if(FALSE){
@@ -84,5 +89,32 @@ for(r in 1:1){ #loop over OM level folders
     } #close if/try
   } #i loop
   write.csv(SRparms,paste(direct,paste(files[r],"SRparms.csv",sep="\\"),sep="\\"))
-  write.csv(converge.count,paste(direct,paste(files[r],"converge_count.csv",sep="\\"),sep="\\"))
+  write.csv((converge.count/length(iters)),paste(direct,paste(files[r],"converge_count.csv",sep="\\"),sep="\\"))
+  
+  quickplot<-function(true=NA,xwant=NA,xlab=NA,dat=NA){
+    plot(y=seq(1:nrow(dat)),x=dat[,xwant],ylab="Iter",xlab=xlab)
+    abline(v=true,lty=2,lwd=2)
+    abline(v=median(dat[,xwant]),lty=3,col="red",lwd=2)
+    legend("topright",legend=c("True","Median"),text.col=c("black","red"))
+  }
+  
+  forpdf<-paste(files[r],".pdf",sep="")
+  pdf(paste(direct,paste(files[r],forpdf,sep="\\"),sep="\\")) #create pdf for graph storage
+  
+  quickplot(true=0.65,xwant="steep",xlab="Steepness - all runs",dat=SRparms)
+  quickplot(true=0.65,xwant="steep",xlab="Steepness - converged",dat=SRparms[SRparms$converge %in% c("yes"),])
+  quickplot(true=0.65,xwant="steep",xlab="Steepness - not converged",dat=SRparms[SRparms$converge %in% c("no"),])
+  
+  quickplot(true=1000,xwant="B0",xlab="Unfished Biomass - all runs",dat=SRparms)
+  quickplot(true=1000,xwant="B0",xlab="Unfished Biomass - converged",dat=SRparms[SRparms$converge %in% c("yes"),])
+  quickplot(true=1000,xwant="B0",xlab="Unfished Biomass -  not converged",dat=SRparms[SRparms$converge %in% c("no"),])
+  dev.off() #close pdf
 } # r loop
+
+
+
+
+
+
+
+
