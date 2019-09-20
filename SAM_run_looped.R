@@ -3,16 +3,17 @@ library(stockassessment)
 source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-ICES-WG-SR-one-off","functions.R",sep="\\")) #shouldn't have to touch
 #library(TMB)
 
-direct<-"B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_BH"
-
+directs<-c("B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_RICKER","B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_BH")
+for(d in 1:length(directs)){ #loop over BH and Ricker fits
+  direct<-directs[1]
 files<-list.files(direct) 
 
-for(r in 4:4){ #loop over OM level folders
+for(r in 1:length(files)){ #loop over OM level folders
   r.folder<-paste(direct,files[r],sep="\\") #OM level (r) folder
   iters<-list.files(r.folder,pattern="iter") #datasets within OM folder
   converge.count<-0 #count the number of converged runs
   SRparms<-c() #matrix(NA,2,8)  #container for all Stock recruit param estimates
-  for(i in 1:1){  #loop over datasets within OM    length(iters)
+  for(i in 1:length(iters)){  #loop over datasets within OM    
     write(i,paste(direct,paste(files[r],"loopcount.txt",sep="\\"),sep="\\"))
     iter<-paste(r.folder,iters[i],sep="\\") #single dataset folder
     #fit<-readRDS(file=paste(r.folder,iters[2],"SAMfit.RData",sep="\\")) #read old result back-in; I noticed some plots aren't made correctly when you read in old results.
@@ -72,7 +73,7 @@ for(r in 4:4){ #loop over OM level folders
     
     conf<-defcon(dat) #a default configuration for SAM; 
     conf$maxAgePlusGroup<-1
-    conf$stockRecruitmentModelCode<-2 #estimate BH SR
+    conf$stockRecruitmentModelCode<-d #Ricker folder for d=1 and BH for d=2
     conf$fbarRange<-c(4,7)
     conf$keyLogFsta[1,]<-c(0,1,2,3,3,3,3,3)
     saveConf(conf,file=paste(iter,"ModelConf.txt",sep="\\"),overwrite=T)
@@ -97,7 +98,7 @@ for(r in 4:4){ #loop over OM level folders
     converge<-"no"
     }
     
-    if(fit$conf$stockRecruitmentModelCode==2){
+    if(fit$conf$stockRecruitmentModelCode==2){  #BH
     alpha<-partable(fit)["rec_loga_0","exp(par)"]
     beta<-partable(fit)["rec_logb_0","exp(par)"]
     alpha.flr<-alpha/beta
@@ -110,13 +111,23 @@ for(r in 4:4){ #loop over OM level folders
     Mature<-fit$data$propMat[nrow(fit$data$propMat),]
     SRparmsa<-SR.parms(nage=max(fit$data$maxAgePerFleet),M=natMor,Wt=StWt,Mat=Mature,alpha=alpha,beta=beta,type=fit$conf$stockRecruitmentModelCode)
     SRparms<-rbind(SRparms,cbind(SRparmsa,alpha.flr,beta.flr,files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
-    } else {
-      if(fit$conf$stockRecruitmentModelCode==0){
+    } else if(fit$conf$stockRecruitmentModelCode==1) {  #Ricker 
+      alpha<-partable(fit)["rec_loga_0","exp(par)"]
+      beta<-partable(fit)["rec_logb_0","exp(par)"] 
+      sigmaR<-partable(fit)["logSdLogN_0","exp(par)"]
+      sigmacatch<-partable(fit)["logSdLogObs_0","exp(par)"]
+      natMor<- fit$data$natMor[nrow(fit$data$natMor),]
+      StWt<-fit$data$stockMeanWeight[nrow(fit$data$stockMeanWeight),]
+      Mature<-fit$data$propMat[nrow(fit$data$propMat),]
+      SRparmsa<-SR.parms(nage=max(fit$data$maxAgePerFleet),M=natMor,Wt=StWt,Mat=Mature,alpha=alpha,beta=beta,type=fit$conf$stockRecruitmentModelCode)
+      SRparms<-rbind(SRparms,cbind(SRparmsa,alpha,beta,files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
+      
+    } else if(fit$conf$stockRecruitmentModelCode==0) {
+     #RW recruitment
         sigmaR<-partable(fit)["logSdLogN_0","exp(par)"]
         sigmacatch<-partable(fit)["logSdLogObs_0","exp(par)"]
         SRparms<-rbind(SRparms,cbind(files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
       }
-    } #if Bev Holt
     
     ##Will save fit details and diagnostic plots pdf if TRUE
     if(FALSE){
@@ -179,6 +190,7 @@ for(r in 4:4){ #loop over OM level folders
   }
   dev.off() #close pdf
 } # r loop
+} #d loop
 
 
 

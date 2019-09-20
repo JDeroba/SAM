@@ -227,7 +227,12 @@ SR.parms<-function(nage=NULL,M=NULL,Wt=NULL,Mat=NULL,alpha=NULL,beta=NULL,type=N
     R0<-(5*steep-1)/(4*steep*beta.star)
     B0<-SSBR0*R0
     return(data.frame("R0"=R0,"B0"=B0,"steep"=steep,"SSBR0"=SSBR0))
-  } else if(type!=2){ 
+  } else if(type==1){  #Ricker
+    steep<-0.2*((alpha*SSBR0)^0.8)
+    R0<-log(5*SSBR0)/(0.8*SSBR0*beta)
+    B0<-SSBR0*R0
+    return(data.frame("R0"=R0,"B0"=B0,"steep"=steep,"SSBR0"=SSBR0))
+  }  else { 
     print("Unknown SR Relationship")
   }
 }
