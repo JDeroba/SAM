@@ -3,13 +3,14 @@ library(stockassessment)
 source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-ICES-WG-SR-one-off","functions.R",sep="\\")) #shouldn't have to touch
 #library(TMB)
 
-directs<-c("B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_RICKER","B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_BH")
+directs<-c("B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_RW","B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_RICKER","B:\\jderoba\\ICES_AMWG_SR\\sa\\SAM_BH")
 for(d in 1:length(directs)){ #loop over BH and Ricker fits
-  direct<-directs[1]
-files<-list.files(direct) 
+  direct<-directs[d]
+  files<-list.files(direct) 
 
 for(r in 1:length(files)){ #loop over OM level folders
   r.folder<-paste(direct,files[r],sep="\\") #OM level (r) folder
+  write(r,paste(direct,"rloopcount.txt",sep="\\"))
   iters<-list.files(r.folder,pattern="iter") #datasets within OM folder
   converge.count<-0 #count the number of converged runs
   SRparms<-c() #matrix(NA,2,8)  #container for all Stock recruit param estimates
@@ -73,7 +74,7 @@ for(r in 1:length(files)){ #loop over OM level folders
     
     conf<-defcon(dat) #a default configuration for SAM; 
     conf$maxAgePlusGroup<-1
-    conf$stockRecruitmentModelCode<-d #Ricker folder for d=1 and BH for d=2
+    conf$stockRecruitmentModelCode<-d-1 #RW=0, Ricker folder for d=1, and BH for d=2; order of directs above matters.
     conf$fbarRange<-c(4,7)
     conf$keyLogFsta[1,]<-c(0,1,2,3,3,3,3,3)
     saveConf(conf,file=paste(iter,"ModelConf.txt",sep="\\"),overwrite=T)
@@ -122,11 +123,19 @@ for(r in 1:length(files)){ #loop over OM level folders
       SRparmsa<-SR.parms(nage=max(fit$data$maxAgePerFleet),M=natMor,Wt=StWt,Mat=Mature,alpha=alpha,beta=beta,type=fit$conf$stockRecruitmentModelCode)
       SRparms<-rbind(SRparms,cbind(SRparmsa,alpha,beta,files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
       
-    } else if(fit$conf$stockRecruitmentModelCode==0) {
-     #RW recruitment
+    } else if(fit$conf$stockRecruitmentModelCode==0) {  #RW recruitment
         sigmaR<-partable(fit)["logSdLogN_0","exp(par)"]
         sigmacatch<-partable(fit)["logSdLogObs_0","exp(par)"]
-        SRparms<-rbind(SRparms,cbind(files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
+        
+        idx <- names(fit$sdrep$value) == "logR"
+        recruitment <- exp(fit$sdrep$value[idx])
+        alpha<-mean(recruitment) #not really alpha, just mean recruitment; makes SR.parms function usable
+        
+        natMor<- fit$data$natMor[nrow(fit$data$natMor),]
+        StWt<-fit$data$stockMeanWeight[nrow(fit$data$stockMeanWeight),]
+        Mature<-fit$data$propMat[nrow(fit$data$propMat),]
+        SRparmsa<-SR.parms(nage=max(fit$data$maxAgePerFleet),M=natMor,Wt=StWt,Mat=Mature,alpha=alpha,beta=NA,type=fit$conf$stockRecruitmentModelCode)
+        SRparms<-rbind(SRparms,cbind(SRparmsa,files[r],iters[i],"converge"=converge,sigmaR,sigmacatch) ) #
       }
     
     ##Will save fit details and diagnostic plots pdf if TRUE
@@ -157,18 +166,19 @@ for(r in 1:length(files)){ #loop over OM level folders
   
   quickplot<-function(true=NA,xwant=NA,xlab=NA,dat=NA){
     plot(y=seq(1:nrow(dat)),x=dat[,xwant],ylab="Iter",xlab=xlab)
-    abline(v=true,lty=2,lwd=2)
+    #abline(v=true,lty=2,lwd=2)
     abline(v=median(dat[,xwant]),lty=3,col="red",lwd=2)
-    legend("topright",legend=c("True","Median"),text.col=c("black","red"))
+    #legend("topright",legend=c("True","Median"),text.col=c("black","red"))
   }
   
   forpdf<-paste(files[r],".pdf",sep="")
   pdf(paste(direct,paste(files[r],forpdf,sep="\\"),sep="\\")) #create pdf for graph storage
-  
+  if((d-1) != 0){
   quickplot(true=0.65,xwant="steep",xlab="Steepness - all runs",dat=SRparms)
   quickplot(true=0.65,xwant="steep",xlab="Steepness - converged",dat=SRparms[SRparms$converge %in% c("yes"),])
   if(nrow(SRparms[SRparms$converge %in% c("no"),])>0) {
   quickplot(true=0.65,xwant="steep",xlab="Steepness - not converged",dat=SRparms[SRparms$converge %in% c("no"),])
+  }
   }
   
   quickplot(true=1000,xwant="B0",xlab="Unfished Biomass - all runs",dat=SRparms)
