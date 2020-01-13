@@ -265,6 +265,7 @@ max.ypr<-function(F,M,Wt,Mat,selectivity.F,B0,type,med.recr,steep,SSBR0,B.MSYfla
     Rhat<-alpha*SSBhat*exp(-beta*SSBhat)     #equilibrium recruitment
   } else (Rhat<-med.recr) #Random recruitment - just use the median for the year being evaluated
   yield<-sum((Faa/Z)*nvec*Wt*(1-exp(-1*Z)))
+  SSBhat<-SSBR*Rhat
   if(B.MSYflag) {         #see MSY function for need for flag
     return(SSBhat)
   } else return(yield*Rhat)
