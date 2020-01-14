@@ -4,18 +4,17 @@ direct.liz<-"H:\\ICES_AMWG_SR\\sa\\ASAP_Liz"
 directs<-c("H:\\ICES_AMWG_SR\\sa\\SAM_BH","H:\\ICES_AMWG_SR\\sa\\SAM_RICKER","H:\\ICES_AMWG_SR\\sa\\SAM_RW")
 source(paste("C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SAM-ICES-WG-SR-one-off","functions.R",sep="\\")) #shouldn't have to touch
 
-#load(file=paste(direct.liz,"asap_output_meanSR_fit.RData",sep="\\"))
-
-for(d in 1:2) { #length(directs)){ #loop over BH and Ricker and RW fits
+for(d in 1:length(directs)){ #loop over BH and Ricker and RW fits
   direct<-directs[d]
   files<-list.files(direct) 
   
-  for(r in 1:2) { #length(files)){ #loop over OM level folders
+  for(r in 1:length(files)){ #loop over OM level folders
     r.folder<-paste(direct,files[r],sep="\\") #OM level (r) folder
     iters<-list.files(r.folder,pattern="iter") #datasets within OM folder
     run<-files[r]
-    for(i in 1:5) { #length(iters)){  #loop over datasets within OM    
+    for(i in 1:length(iters)){  #loop over datasets within OM    
       iter<-paste(r.folder,iters[i],sep="\\") #single dataset folder
+      if(file.exists(paste(r.folder,iters[i],"SAMfit.RData",sep="\\"))){
       fit<-readRDS(file=paste(r.folder,iters[i],"SAMfit.RData",sep="\\")) #read old result back-in;
       
       iter.b<-iters[i]
@@ -96,6 +95,7 @@ for(d in 1:2) { #length(directs)){ #loop over BH and Ricker and RW fits
         srest<-rbind(srest,srest.a)
         vcv<-rbind(vcv,vcv.a)
       }
+      } #close if exists
     } #close i
   } #close r
   ReadMe<-"vcv is the variance covariance matrix for logR and logSSB.  For each run and iter, there is
