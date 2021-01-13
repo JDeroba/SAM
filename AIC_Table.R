@@ -37,22 +37,30 @@ table(AIC.ALL$Winner)
 ########################################################
 load(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_TABLE.RData",sep="\\"))
 for.truth=read.csv(file=paste("H:\\ICES_AMWG_SR\\sa","runs_liz.csv",sep="\\"))
-truth=data.frame("case"=for.truth$case,"model"=for.truth$model)
-truth$run=paste0("r",truth$case)
-truth$model=ifelse(truth$model=="bevholt","BH",truth$model)
-truth$model=ifelse(truth$model=="ricker","Ricker",truth$model)
+#truth=data.frame("case"=for.truth$case,"model"=for.truth$model)
+for.truth$run=paste0("r",for.truth$case)
+for.truth$model=ifelse(for.truth$model=="bevholt","BH",for.truth$model)
+for.truth$model=ifelse(for.truth$model=="ricker","Ricker",for.truth$model)
 
-truth$model_jjd=ifelse(truth$model=="BH","BH",truth$model)
-truth$model_jjd=ifelse(truth$model=="Ricker","Ricker",truth$model_jjd)
-truth$model_jjd=ifelse(truth$model=="segreg","BH",truth$model_jjd)
-truth$model_jjd=ifelse(truth$model=="mean","RW",truth$model_jjd)
+for.truth$model_jjd=ifelse(for.truth$model=="BH","BH",for.truth$model)
+for.truth$model_jjd=ifelse(for.truth$model=="Ricker","Ricker",for.truth$model_jjd)
+for.truth$model_jjd=ifelse(for.truth$model=="segreg","BH",for.truth$model_jjd)
+for.truth$model_jjd=ifelse(for.truth$model=="mean","RW",for.truth$model_jjd)
 
-AIC.ALL=merge(AIC.ALL,truth,by="run")
+AIC.ALL=merge(AIC.ALL,for.truth,by="run")
 AIC.ALL$correct_jjd=ifelse(AIC.ALL$model_jjd==AIC.ALL$Winner$Winner,1,0)
 AIC.ALL$correct_om=ifelse(AIC.ALL$model==AIC.ALL$Winner$Winner,1,0)
 
-table(AIC.ALL$model_jjd,AIC.ALL$correct_jjd)
-table(AIC.ALL$model,AIC.ALL$correct_om)
-table(AIC.ALL$model,AIC.ALL$Winner$Winner)
-table(AIC.ALL$model_jjd,AIC.ALL$Winner$Winner)
+#table(AIC.ALL$model_jjd,AIC.ALL$correct_jjd)
+#table(AIC.ALL$model,AIC.ALL$correct_om)
+
+model.winner=table(AIC.ALL$model,AIC.ALL$Winner$Winner)
+rownames(model.winner)=paste0(rownames(model.winner),".om")
+model.winner.perc=round(model.winner/rowSums(model.winner),3)
+
+model.winner.jjd=table(AIC.ALL$model_jjd,AIC.ALL$Winner$Winner)
+rownames(model.winner.jjd)=paste0(rownames(model.winner.jjd),".om")
+model.winner.perc.jjd=round(model.winner.jjd/rowSums(model.winner.jjd),3)
+
+table(AIC.ALL$model,AIC.ALL$Winner$Winner,AIC.ALL$sigmaR)
 
