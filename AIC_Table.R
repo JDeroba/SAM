@@ -36,8 +36,8 @@ table(AIC.ALL$Winner)
 
 ########################################################
 load(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_TABLE.RData",sep="\\"))
+AIC.ALL$Winner=as.vector(AIC.ALL$Winner$Winner) #quick data munge
 for.truth=read.csv(file=paste("H:\\ICES_AMWG_SR\\sa","runs_liz.csv",sep="\\"))
-#truth=data.frame("case"=for.truth$case,"model"=for.truth$model)
 for.truth$run=paste0("r",for.truth$case)
 for.truth$model=ifelse(for.truth$model=="bevholt","BH",for.truth$model)
 for.truth$model=ifelse(for.truth$model=="ricker","Ricker",for.truth$model)
@@ -48,19 +48,39 @@ for.truth$model_jjd=ifelse(for.truth$model=="segreg","BH",for.truth$model_jjd)
 for.truth$model_jjd=ifelse(for.truth$model=="mean","RW",for.truth$model_jjd)
 
 AIC.ALL=merge(AIC.ALL,for.truth,by="run")
-AIC.ALL$correct_jjd=ifelse(AIC.ALL$model_jjd==AIC.ALL$Winner$Winner,1,0)
-AIC.ALL$correct_om=ifelse(AIC.ALL$model==AIC.ALL$Winner$Winner,1,0)
+AIC.ALL$correct_jjd=ifelse(AIC.ALL$model_jjd==AIC.ALL$Winner,1,0)
+AIC.ALL$correct_om=ifelse(AIC.ALL$model==AIC.ALL$Winner,1,0)
 
 #table(AIC.ALL$model_jjd,AIC.ALL$correct_jjd)
 #table(AIC.ALL$model,AIC.ALL$correct_om)
 
-model.winner=table(AIC.ALL$model,AIC.ALL$Winner$Winner)
-rownames(model.winner)=paste0(rownames(model.winner),".om")
-model.winner.perc=round(model.winner/rowSums(model.winner),3)
+library(janitor)
+model.winner=tabyl(AIC.ALL,model,Winner)
+model.winner$model=paste0(model.winner$model,".om")
+model.winner.perc=round(model.winner[,2:4]/rowSums(model.winner[,2:4]),3)
+model.winner.perc$model=model.winner$model
 
-model.winner.jjd=table(AIC.ALL$model_jjd,AIC.ALL$Winner$Winner)
-rownames(model.winner.jjd)=paste0(rownames(model.winner.jjd),".om")
-model.winner.perc.jjd=round(model.winner.jjd/rowSums(model.winner.jjd),3)
+model.winner.jjd=tabyl(AIC.ALL,model_jjd,Winner)
+model.winner.jjd$model=paste0(model.winner.jjd$model,".om")
+model.winner.perc.jjd=round(model.winner.jjd[,2:4]/rowSums(model.winner.jjd[,2:4]),3)
+model.winner.perc.jjd$model=model.winner.jjd$model
 
-table(AIC.ALL$model,AIC.ALL$Winner$Winner,AIC.ALL$sigmaR)
+#function to calcuate proportion winner for three way contingency
+threeway=function(dat=NULL){
+dat.prop=lapply(1:length(dat),function(x) {
+  tempsums=rowSums(dat[[x]][,2:4])
+  props=dat[[x]][,2:4]/tempsums
+  rownames(props)=paste0(dat[[x]][,1],".om")
+  return(props)
+})
+names(dat.prop)=names(dat)
+return(dat.prop)
+}
+#by sigmaR
+model.winner.sigR=tabyl(AIC.ALL,model,Winner,sigmaR)
+model.winner.sigR.prop=threeway(model.winner.sigR)
+#by devs
+model.winner.devs=tabyl(AIC.ALL,model,Winner,devs)
+model.winner.devs.prop=threeway(model.winner.devs)
 
+playchi=chisq.test(model.winner.devs[[3]])
