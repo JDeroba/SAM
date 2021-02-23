@@ -79,8 +79,16 @@ return(dat.prop)
 #by sigmaR
 model.winner.sigR=tabyl(AIC.ALL,model,Winner,sigmaR)
 model.winner.sigR.prop=threeway(model.winner.sigR)
-#by devs
-model.winner.devs=tabyl(AIC.ALL,model,Winner,devs)
-model.winner.devs.prop=threeway(model.winner.devs)
 
-playchi=chisq.test(model.winner.devs[[3]])
+#windows(width = 12,height=10)
+pdf(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_PLOTS.pdf",sep="\\"))
+barplot(t(as.matrix(model.winner.sigR.prop[[1]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[1]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[1])))
+barplot(t(as.matrix(model.winner.sigR.prop[[2]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[2]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[2])))
+barplot(t(as.matrix(model.winner.sigR.prop[[3]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[3]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR.RW=",names(model.winner.sigR.prop[3])))
+dev.off()
+
+#by devs - redundant with sigmaR
+#model.winner.devs=tabyl(AIC.ALL,model,Winner,devs)
+#model.winner.devs.prop=threeway(model.winner.devs)
+
+#playchi=chisq.test(model.winner.devs[[3]])
