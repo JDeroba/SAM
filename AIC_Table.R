@@ -32,7 +32,7 @@ AIC.Winner= do.call(rbind.data.frame, AIC.Winner)
 names(AIC.Winner)=c("Winner")
 AIC.ALL$Winner=AIC.Winner
 #save(AIC.ALL,file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_TABLE.RData",sep="\\"))
-table(AIC.ALL$Winner)
+#table(AIC.ALL$Winner)
 
 ########################################################
 load(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_TABLE.RData",sep="\\"))
@@ -51,44 +51,83 @@ AIC.ALL=merge(AIC.ALL,for.truth,by="run")
 AIC.ALL$correct_jjd=ifelse(AIC.ALL$model_jjd==AIC.ALL$Winner,1,0)
 AIC.ALL$correct_om=ifelse(AIC.ALL$model==AIC.ALL$Winner,1,0)
 
-#table(AIC.ALL$model_jjd,AIC.ALL$correct_jjd)
-#table(AIC.ALL$model,AIC.ALL$correct_om)
+##try doing plots different way than above and adding trajectory to the mix
+traj_sigR=table(AIC.ALL$model,AIC.ALL$Winner,AIC.ALL$sigmaR,AIC.ALL$traj)
 
-library(janitor)
-model.winner=tabyl(AIC.ALL,model,Winner)
-model.winner$model=paste0(model.winner$model,".om")
-model.winner.perc=round(model.winner[,2:4]/rowSums(model.winner[,2:4]),3)
-model.winner.perc$model=model.winner$model
-
-model.winner.jjd=tabyl(AIC.ALL,model_jjd,Winner)
-model.winner.jjd$model=paste0(model.winner.jjd$model,".om")
-model.winner.perc.jjd=round(model.winner.jjd[,2:4]/rowSums(model.winner.jjd[,2:4]),3)
-model.winner.perc.jjd$model=model.winner.jjd$model
-
-#function to calcuate proportion winner for three way contingency
-threeway=function(dat=NULL){
-dat.prop=lapply(1:length(dat),function(x) {
-  tempsums=rowSums(dat[[x]][,2:4])
-  props=dat[[x]][,2:4]/tempsums
-  rownames(props)=paste0(dat[[x]][,1],".om")
-  return(props)
-})
-names(dat.prop)=names(dat)
-return(dat.prop)
+table.prop=function(tabble=NULL){
+  table.attr=attributes(tabble)
+  do.props=lapply((1:3),function(x) {
+    lapply((1:3),function(y){
+    temptab=tabble[,,y,x]
+    tempsums=rowSums(temptab)
+    props=temptab/tempsums
+    rownames(props)=paste0(rownames(props),".om")
+    attributes(props)$id=c(table.attr[[2]][[3]][y],table.attr[[2]][[4]][x])
+    return(props)
+  })
+  })
+  return(do.props)
 }
-#by sigmaR
-model.winner.sigR=tabyl(AIC.ALL,model,Winner,sigmaR)
-model.winner.sigR.prop=threeway(model.winner.sigR)
 
-#windows(width = 12,height=10)
-pdf(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_PLOTS.pdf",sep="\\"))
-barplot(t(as.matrix(model.winner.sigR.prop[[1]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[1]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[1])))
-barplot(t(as.matrix(model.winner.sigR.prop[[2]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[2]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[2])))
-barplot(t(as.matrix(model.winner.sigR.prop[[3]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[3]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR.RW=",names(model.winner.sigR.prop[3])))
-dev.off()
+model.winner.props=table.prop(tabble=traj_sigR)
+#loop to take a list of tables and turn it into a df
+for(i in 1:3){
+  for(j in 1:3){
+  if(i==1 & j==1){
+    df.model.winner.props=as.data.frame(model.winner.props[[i]][[j]])
+    df.model.winner.props$dev_type=attributes(model.winner.props[[i]][[j]])$id[1]
+    df.model.winner.props$fhist=attributes(model.winner.props[[i]][[j]])$id[2]
+  } else {
+    temp=as.data.frame(model.winner.props[[i]][[j]])
+    temp$dev_type=attributes(model.winner.props[[i]][[j]])$id[1]
+    temp$fhist=attributes(model.winner.props[[i]][[j]])$id[2]
+    df.model.winner.props=rbind(df.model.winner.props,temp)
+  }
+  }
+}
+names(df.model.winner.props)=c("true","assumed","prop","dev_type","fhist")
 
-#by devs - redundant with sigmaR
-#model.winner.devs=tabyl(AIC.ALL,model,Winner,devs)
-#model.winner.devs.prop=threeway(model.winner.devs)
+library(tidyverse)
+x = ggplot(df.model.winner.props, aes(fill= assumed, y = prop, x = true)) + 
+  geom_bar(position="stack", stat = "identity") +
+  facet_wrap(dev_type~fhist) + theme(axis.text.x = element_text(angle = 90))
+ggsave(file =paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_PLOTS.pdf",sep="\\"),x)
 
-#playchi=chisq.test(model.winner.devs[[3]])
+##################some old inefficient code that I replaced with ggplot above; keep for some code tidbits
+if(FALSE){
+  #table(AIC.ALL$model_jjd,AIC.ALL$correct_jjd)
+  #table(AIC.ALL$model,AIC.ALL$correct_om)
+  
+  library(janitor)
+  model.winner=tabyl(AIC.ALL,model,Winner)
+  model.winner$model=paste0(model.winner$model,".om")
+  model.winner.perc=round(model.winner[,2:4]/rowSums(model.winner[,2:4]),3)
+  model.winner.perc$model=model.winner$model
+  
+  model.winner.jjd=tabyl(AIC.ALL,model_jjd,Winner)
+  model.winner.jjd$model=paste0(model.winner.jjd$model,".om")
+  model.winner.perc.jjd=round(model.winner.jjd[,2:4]/rowSums(model.winner.jjd[,2:4]),3)
+  model.winner.perc.jjd$model=model.winner.jjd$model
+  
+  #function to calcuate proportion winner for three way contingency
+  threeway=function(dat=NULL){
+    dat.prop=lapply(1:length(dat),function(x) {
+      tempsums=rowSums(dat[[x]][,2:4])
+      props=dat[[x]][,2:4]/tempsums
+      rownames(props)=paste0(dat[[x]][,1],".om")
+      return(props)
+    })
+    names(dat.prop)=names(dat)
+    return(dat.prop)
+  }
+  #by sigmaR
+  model.winner.sigR=tabyl(AIC.ALL,model,Winner,sigmaR)
+  model.winner.sigR.prop=threeway(model.winner.sigR)
+  
+  #windows(width = 12,height=10)
+  pdf(file=paste("H:\\ICES_AMWG_SR\\sa","SAM_AIC_PLOTS.pdf",sep="\\"))
+  barplot(t(as.matrix(model.winner.sigR.prop[[1]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[1]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[1])))
+  barplot(t(as.matrix(model.winner.sigR.prop[[2]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[2]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR=",names(model.winner.sigR.prop[2])))
+  barplot(t(as.matrix(model.winner.sigR.prop[[3]])),xlab="Operating Model",legend=TRUE,args.legend=list(bg="white",colnames(model.winner.sigR.prop[[3]])),col=c("black","red","blue"),ylab="Proportion",main=paste0("sigmaR.RW=",names(model.winner.sigR.prop[3])))
+  dev.off()
+} #end if false
