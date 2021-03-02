@@ -52,7 +52,7 @@ AIC.ALL$correct_jjd=ifelse(AIC.ALL$model_jjd==AIC.ALL$Winner,1,0)
 AIC.ALL$correct_om=ifelse(AIC.ALL$model==AIC.ALL$Winner,1,0)
 
 ##try doing plots different way than above and adding trajectory to the mix
-traj_sigR=table(AIC.ALL$model,AIC.ALL$Winner,AIC.ALL$sigmaR,AIC.ALL$traj)
+traj_sigR=table(AIC.ALL$model,AIC.ALL$Winner,AIC.ALL$devs,AIC.ALL$traj)
 
 table.prop=function(tabble=NULL){
   table.attr=attributes(tabble)
